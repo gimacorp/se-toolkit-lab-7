@@ -3,11 +3,17 @@
 import os
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class BotSettings(BaseSettings):
     """Bot configuration loaded from environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env.bot.secret",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # Telegram
     bot_token: str = ""
@@ -20,10 +26,6 @@ class BotSettings(BaseSettings):
     llm_api_model: str = "coder-model"
     llm_api_key: str = ""
     llm_api_base_url: str = ""
-
-    class Config:
-        env_file = ".env.bot.secret"
-        env_file_encoding = "utf-8"
 
 
 def load_config() -> BotSettings:
@@ -39,7 +41,8 @@ def load_config() -> BotSettings:
         # Fall back to environment variables only
         return BotSettings()
 
-    return BotSettings(env_file=str(env_file))
+    # Use _env_file to specify the file path
+    return BotSettings(_env_file=str(env_file))
 
 
 def is_test_mode() -> bool:
