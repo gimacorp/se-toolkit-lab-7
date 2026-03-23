@@ -4,6 +4,7 @@
 Usage:
     uv run bot.py              # Run in Telegram mode (requires BOT_TOKEN)
     uv run bot.py --test "/start"  # Run in test mode (no Telegram connection)
+    uv run bot.py --test "what labs are available"  # Natural language query
 """
 
 import argparse
@@ -41,12 +42,13 @@ def parse_command(text: str) -> tuple[str, str | None]:
     return command, argument
 
 
-async def run_command(command: str, argument: str | None = None) -> str:
+async def run_command(command: str, argument: str | None = None, debug: bool = False) -> str:
     """Execute a command and return the response.
 
     Args:
         command: Command name (e.g., "/start", "/help")
         argument: Optional command argument
+        debug: If True, enable debug output for natural language queries
 
     Returns:
         Response text from the handler.
@@ -64,24 +66,32 @@ async def run_command(command: str, argument: str | None = None) -> str:
     else:
         # Treat as natural language query
         full_text = f"{command} {argument}" if argument else command
-        return await handle_natural_language(full_text)
+        return await handle_natural_language(full_text, debug=debug)
 
 
-async def run_test_mode(command_text: str) -> None:
+async def run_test_mode(command_text: str, debug: bool = False) -> None:
     """Run a command in test mode and print result to stdout.
 
     Args:
         command_text: Full command text (e.g., "/start" or "/scores lab-04")
+        debug: If True, enable debug output to stderr
     """
     command, argument = parse_command(command_text)
-    response = await run_command(command, argument)
+    
+    # Check if it looks like a command or natural language
+    if command.startswith("/"):
+        response = await run_command(command, argument, debug=debug)
+    else:
+        # Natural language query - treat entire input as the query
+        response = await handle_natural_language(command_text, debug=debug)
+    
     print(response)
 
 
 async def run_telegram_mode() -> None:
     """Run the bot in Telegram mode.
 
-    This will be implemented in Task 2 when we add aiogram integration.
+    This will be implemented in Task 4 when we add aiogram integration.
     """
     config = load_config()
 
@@ -92,10 +102,10 @@ async def run_telegram_mode() -> None:
         )
         sys.exit(1)
 
-    # Telegram bot implementation will be added in Task 2
+    # Telegram bot implementation will be added in Task 4
     # For now, show a message that test mode is available
-    print("Telegram bot mode - coming in Task 2!")
-    print("Use --test mode for now: uv run bot.py --test '/start'")
+    print("Telegram bot mode - coming in Task 4!")
+    print("Use --test mode for now: uv run bot.py --test 'what labs are available'")
 
 
 def main() -> None:
@@ -105,23 +115,31 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    uv run bot.py --test "/start"         Test /start command
-    uv run bot.py --test "/help"          Test /help command
-    uv run bot.py --test "/health"        Test /health command
-    uv run bot.py --test "/scores lab-04" Test /scores with argument
+    uv run bot.py --test "/start"                  Test /start command
+    uv run bot.py --test "/help"                   Test /help command
+    uv run bot.py --test "/health"                 Test /health command
+    uv run bot.py --test "/labs"                   Test /labs command
+    uv run bot.py --test "/scores lab-04"          Test /scores with argument
+    uv run bot.py --test "what labs are available" Natural language query
+    uv run bot.py --test "which lab has lowest pass rate"  Multi-step query
         """,
     )
     parser.add_argument(
         "--test",
-        metavar="COMMAND",
-        help="Run in test mode with the specified command (no Telegram connection)",
+        metavar="QUERY",
+        help="Run in test mode with the specified command or natural language query (no Telegram connection)",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug output (shows LLM tool calls to stderr)",
     )
 
     args = parser.parse_args()
 
     if args.test:
         # Test mode - run command and print result
-        asyncio.run(run_test_mode(args.test))
+        asyncio.run(run_test_mode(args.test, debug=args.debug))
     else:
         # Telegram mode - run the actual bot
         asyncio.run(run_telegram_mode())
