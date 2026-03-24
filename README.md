@@ -92,6 +92,98 @@ By the end of this lab, you should be able to say:
 3. [Intent-Based Natural Language Routing](./lab/tasks/required/task-3.md) — P1: LLM tool use
 4. [Containerize and Document](./lab/tasks/required/task-4.md) — P3: containerize + deploy
 
+## Deploy
+
+The bot runs as a Docker container alongside the backend on your VM.
+
+### Prerequisites
+
+- VM with Docker installed
+- Backend services running (`backend`, `postgres`, `caddy`)
+- Qwen Code API or other LLM provider accessible
+
+### Environment variables
+
+Create `.env.docker.secret` in the project root:
+
+```bash
+cp .env.docker.example .env.docker.secret
+nano .env.docker.secret
+```
+
+Required variables for the bot:
+
+```text
+# Telegram
+BOT_TOKEN=<your-bot-token-from-botfather>
+
+# LMS API
+LMS_API_KEY=<same-value-as-backend>
+
+# LLM API (Qwen Code)
+LLM_API_KEY=<qwen-code-api-key>
+LLM_API_BASE_URL=http://host.docker.internal:42005/v1
+LLM_API_MODEL=coder-model
+```
+
+> [!IMPORTANT]
+> Inside Docker, use `http://host.docker.internal:42005/v1` for LLM API (not `localhost`). The bot uses `http://backend:8000` for the LMS backend via Docker networking.
+
+### Deploy commands
+
+On your VM:
+
+```bash
+cd ~/se-toolkit-lab-7
+
+# Stop any running bot process (from nohup)
+pkill -f "bot.py" 2>/dev/null
+
+# Build and start all services
+docker compose --env-file .env.docker.secret up --build -d
+
+# Check status
+docker compose --env-file .env.docker.secret ps
+
+# Check bot logs
+docker compose --env-file .env.docker.secret logs bot --tail 50
+```
+
+### Verify
+
+1. **Container running:**
+
+   ```bash
+   docker compose --env-file .env.docker.secret ps bot
+   ```
+
+   Should show `bot` service as `Up`.
+
+2. **Backend healthy:**
+
+   ```bash
+   curl -sf http://localhost:42002/docs
+   ```
+
+   Should return 200 with Swagger UI.
+
+3. **Telegram:**
+
+   Send to your bot:
+   - `/start` — welcome message
+   - `/health` — backend status
+   - "what labs are available?" — natural language query
+   - "which lab has the lowest pass rate?" — multi-step reasoning
+
+### Troubleshooting
+
+| Symptom | Solution |
+|---------|----------|
+| Bot container restarting | Check logs: `docker compose logs bot` |
+| LLM errors | Ensure `LLM_API_BASE_URL` uses `host.docker.internal` |
+| Backend connection failed | Check `LMS_API_BASE_URL=http://backend:8000` |
+| BOT_TOKEN error | Verify token in `.env.docker.secret` |
+
 ### Optional
 
 1. [Flutter Web Chatbot](./lab/tasks/optional/task-1.md)
