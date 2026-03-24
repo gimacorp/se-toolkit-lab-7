@@ -12,6 +12,12 @@ from handlers.commands import (
     handle_scores,
     handle_start,
 )
+from handlers.keyboards import (
+    get_back_keyboard,
+    get_help_keyboard,
+    get_lab_actions_keyboard,
+    get_start_keyboard,
+)
 
 __all__ = [
     "handle_start",
@@ -20,4 +26,8 @@ __all__ = [
     "handle_labs",
     "handle_scores",
     "handle_natural_language",
+    "get_start_keyboard",
+    "get_help_keyboard",
+    "get_lab_actions_keyboard",
+    "get_back_keyboard",
 ]

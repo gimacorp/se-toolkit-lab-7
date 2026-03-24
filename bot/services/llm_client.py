@@ -26,10 +26,10 @@ class LLMClient:
         base_url: str,
         api_key: str,
         model: str = "coder-model",
-        timeout: float = 30.0,
+        timeout: float = 120.0,
     ):
         """Initialize the LLM client.
-        
+
         Args:
             base_url: Base URL of the LLM API
             api_key: API key for authentication

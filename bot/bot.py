@@ -9,12 +9,17 @@ Usage:
 
 import argparse
 import asyncio
+import logging
 import sys
 from pathlib import Path
 
 # Add bot directory to path for imports
 bot_dir = Path(__file__).parent
 sys.path.insert(0, str(bot_dir))
+
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command, CommandStart
+from aiogram.types import Message
 
 from config import is_test_mode, load_config
 from handlers import (
@@ -91,7 +96,7 @@ async def run_test_mode(command_text: str, debug: bool = False) -> None:
 async def run_telegram_mode() -> None:
     """Run the bot in Telegram mode.
 
-    This will be implemented in Task 4 when we add aiogram integration.
+    This starts the aiogram dispatcher and polls for updates from Telegram.
     """
     config = load_config()
 
@@ -102,10 +107,55 @@ async def run_telegram_mode() -> None:
         )
         sys.exit(1)
 
-    # Telegram bot implementation will be added in Task 4
-    # For now, show a message that test mode is available
-    print("Telegram bot mode - coming in Task 4!")
-    print("Use --test mode for now: uv run bot.py --test 'what labs are available'")
+    # Configure logging
+    logging.basicConfig(level=logging.INFO)
+
+    # Create bot and dispatcher
+    bot = Bot(token=config.bot_token)
+    dp = Dispatcher()
+
+    # Register command handlers
+    @dp.message(CommandStart())
+    async def cmd_start(message: Message) -> None:
+        """Handle /start command."""
+        response = await handle_start()
+        await message.answer(response)
+
+    @dp.message(Command("help"))
+    async def cmd_help(message: Message) -> None:
+        """Handle /help command."""
+        response = await handle_help()
+        await message.answer(response)
+
+    @dp.message(Command("health"))
+    async def cmd_health(message: Message) -> None:
+        """Handle /health command."""
+        response = await handle_health()
+        await message.answer(response)
+
+    @dp.message(Command("labs"))
+    async def cmd_labs(message: Message) -> None:
+        """Handle /labs command."""
+        response = await handle_labs()
+        await message.answer(response)
+
+    @dp.message(Command("scores"))
+    async def cmd_scores(message: Message) -> None:
+        """Handle /scores command."""
+        # Extract lab_id from command arguments
+        lab_id = message.text.split(maxsplit=1)[1] if len(message.text.split()) > 1 else None
+        response = await handle_scores(lab_id)
+        await message.answer(response)
+
+    @dp.message()
+    async def handle_message(message: Message) -> None:
+        """Handle all other messages as natural language queries."""
+        response = await handle_natural_language(message.text or "")
+        await message.answer(response)
+
+    # Start polling
+    print("Application started")
+    await dp.start_polling(bot)
 
 
 def main() -> None:
